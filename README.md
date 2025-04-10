@@ -46,7 +46,7 @@ glint/
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/your-username/glint.git
+git clone https://github.com/anuptiwari17/glint.git
 cd glint
 ```
 
