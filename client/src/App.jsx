@@ -70,7 +70,7 @@ function App() {
     <div className={`min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white`}>
       <div className="container mx-auto p-4 md:p-6 max-w-4xl">
         <header className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold text-primary-light">API Tester Tool</h1>
+          <h1 className="text-2xl md:text-3xl font-bold text-primary-light">Glint - API Tester Tool</h1>
           <ThemeToggle />
         </header>
 
@@ -139,7 +139,7 @@ function App() {
         </main>
 
         <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>API Tester Tool - A lightweight Postman clone</p>
+          <p>Glint - A lightweight Postman clone</p>
         </footer>
       </div>
     </div>
