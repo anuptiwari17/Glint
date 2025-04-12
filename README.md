@@ -1,6 +1,6 @@
 # 🔦 Glint - A Simple Postman-like API Tester
 
-**Glint** is a minimal, fast, and beginner-friendly API testing tool built using the **MERN stack**. It allows you to send and test HTTP requests (GET, POST, PUT, DELETE, etc.) with a clean interface, response viewer, and auto-saved history — all without login or authentication.
+**Glint** is a minimal, fast, and beginner-friendly API testing tool built using the **MERN stack**. It allows you to send and test HTTP requests (GET, POST, PUT, DELETE, etc.) with a clean interface, response viewer, and auto-saved history — all without login or authentication. It also includes an **AI-powered assistant** that provides helpful suggestions when errors occur in your API requests.
 
 ---
 
@@ -9,6 +9,7 @@
 - Send all types of HTTP requests (GET, POST, PUT, DELETE)
 - Add custom headers and body data
 - View response status, headers, and body
+- AI-based suggestions when an error occurs (e.g., wrong URL, bad headers, or invalid request body)
 - Built using MERN stack (MongoDB, Express, React, Node.js)
 - Lightweight and beginner-friendly
 
@@ -30,9 +31,8 @@ glint/
 
 - **Frontend**: React.js, Axios
 - **Backend**: Node.js, Express.js
-- **Database**: MongoDB Atlas
-- **HTTP Client**: Axios (in frontend)
 - **State Management**: React Hooks
+- **AI Assistant**: Gemini API
 
 ---
 
@@ -41,7 +41,7 @@ glint/
 ### Prerequisites
 
 - Node.js and npm
-- MongoDB Atlas account
+- Gemini API Key
 
 ### 1. Clone the repository
 
@@ -61,7 +61,7 @@ Create a `.env` file inside `server/` and add:
 
 ```
 PORT=5000
-MONGO_URI=your_mongodb_atlas_connection_string
+GEMINI_API_KEY=your-api-key
 ```
 
 Start the backend server:
@@ -88,6 +88,19 @@ Open `http://localhost:3000` in your browser 🎉
 2. Optionally add headers or body.
 3. Click **Send** and view the response.
 4. Your request is saved in history automatically.
+5. If there's an error, Glint will use AI to suggest what went wrong and how you can fix it.
+
+---
+
+## 🤖 AI-Powered Error Assistant
+
+When an API request fails (due to status codes like 4xx or 5xx), **Glint** will provide suggestions powered by an AI assistant:
+
+- Diagnose why the request failed
+- Recommend how to correct it (e.g., check URL, headers, JSON structure)
+- Offer improvement suggestions based on the response and request
+
+This makes debugging faster and smarter 💡
 
 ---
 
