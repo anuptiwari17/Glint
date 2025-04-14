@@ -1,10 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactJson from 'react-json-view';
+import AISuggestion from './AISuggestion'; // ✅ AI suggestion component
 import { formatDuration, getStatusCodeColor } from '../utils/helpers';
 
 const ResponseViewer = ({ response, isLoading, error }) => {
-  const [viewMode, setViewMode] = useState('formatted'); // 'formatted' or 'raw'
+  const [viewMode, setViewMode] = useState('formatted');
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+
+  // 🔁 Auto-fetch AI suggestions when response is an error
+  useEffect(() => {
+    if (response && response.status >= 400) {
+      getAISuggestion();
+    } else {
+      setAiSuggestion(null);
+      setAiError(null);
+    }
+  }, [response]);
+
+  const getAISuggestion = async () => {
+    setAiLoading(true);
+    setAiError(null);
   
+    try {
+      const res = await fetch('/api/ai/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: response.url,
+          method: response.method,
+          headers: response.requestHeaders || {},
+          body: response.requestBody || {},
+          responseStatus: response.status,
+          responseData: response.data || {}
+        })
+      });
+  
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to fetch AI suggestion');
+      }
+  
+      const data = await res.json();
+      if (!data.suggestion) {
+        throw new Error('No suggestion received from AI');
+      }
+  
+      setAiSuggestion(data.suggestion);
+    } catch (err) {
+      console.error('AI Suggestion Error:', err);
+      setAiError(err.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+  
+
   if (isLoading) {
     return (
       <div className="mt-6 card animate-pulse">
@@ -29,13 +81,11 @@ const ResponseViewer = ({ response, isLoading, error }) => {
     );
   }
 
-  if (!response) {
-    return null;
-  }
+  if (!response) return null;
 
-  const { status, statusText, headers, data, duration, isError } = response;
-
+  const { status, statusText, headers, data, duration } = response;
   const statusColor = getStatusCodeColor(status);
+  const showAiSection = response && response.status >= 400;
 
   return (
     <div className="mt-6">
@@ -52,50 +102,33 @@ const ResponseViewer = ({ response, isLoading, error }) => {
           </div>
         </div>
 
-        {/* Response Tab Controls */}
+        {/* Tab Controls */}
         <div className="border-b border-gray-200 dark:border-gray-700 mb-4">
           <nav className="flex space-x-4">
-            <button
-              className={`py-2 px-4 text-sm font-medium border-b-2 ${
-                viewMode === 'formatted'
-                  ? 'border-primary-light text-primary-light dark:text-primary-light'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-              onClick={() => setViewMode('formatted')}
-            >
-              Formatted
-            </button>
-            <button
-              className={`py-2 px-4 text-sm font-medium border-b-2 ${
-                viewMode === 'raw'
-                  ? 'border-primary-light text-primary-light dark:text-primary-light'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-              onClick={() => setViewMode('raw')}
-            >
-              Raw
-            </button>
-            <button
-              className={`py-2 px-4 text-sm font-medium border-b-2 ${
-                viewMode === 'headers'
-                  ? 'border-primary-light text-primary-light dark:text-primary-light'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
-              }`}
-              onClick={() => setViewMode('headers')}
-            >
-              Headers
-            </button>
+            {['formatted', 'raw', 'headers'].map((mode) => (
+              <button
+                key={mode}
+                className={`py-2 px-4 text-sm font-medium border-b-2 ${
+                  viewMode === mode
+                    ? 'border-primary-light text-primary-light dark:text-primary-light'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
+                }`}
+                onClick={() => setViewMode(mode)}
+              >
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            ))}
           </nav>
         </div>
 
-        {/* Response Content */}
+        {/* Content Viewer */}
         {viewMode === 'formatted' && (
           <div className="overflow-auto max-h-96 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 p-2">
             {typeof data === 'object' ? (
               <ReactJson 
                 src={data} 
-                theme={darkMode => darkMode ? "monokai" : "rjv-default"} 
-                enableClipboard={true}
+                theme={document.documentElement.classList.contains('dark') ? "monokai" : "rjv-default"}
+                enableClipboard
                 displayDataTypes={false}
                 collapsed={2}
               />
@@ -110,9 +143,7 @@ const ResponseViewer = ({ response, isLoading, error }) => {
         {viewMode === 'raw' && (
           <div className="overflow-auto max-h-96 bg-gray-50 dark:bg-gray-900 rounded border border-gray-200 dark:border-gray-700 p-2">
             <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
-              {typeof data === 'object' 
-                ? JSON.stringify(data, null, 2) 
-                : String(data)}
+              {typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data)}
             </pre>
           </div>
         )}
@@ -133,6 +164,17 @@ const ResponseViewer = ({ response, isLoading, error }) => {
           </div>
         )}
       </div>
+
+      {/* 🧠 AI Suggestion Section */}
+      {showAiSection && (
+        <div className="mt-4">
+          <AISuggestion 
+            isLoading={aiLoading}
+            suggestion={aiSuggestion}
+            error={aiError}
+          />
+        </div>
+      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const errorHandler = require('./middleware/errorHandler');
+const aiRouter = require('./routes/ai');
 
 // Load environment variables
 dotenv.config();
@@ -17,6 +18,7 @@ app.use(cors({
 
 // Routes
 app.use('/api/request', require('./routes/requestRoutes'));
+app.use('/api/ai', aiRouter);
 
 // Simple health check endpoint
 app.get('/health', (req, res) => {

@@ -1,5 +1,18 @@
 import React from 'react';
 
+const commonHeaders = {
+  'Content-Type': [
+    'application/json',
+    'application/x-www-form-urlencoded',
+    'multipart/form-data',
+  ],
+  'Accept': ['application/json', 'text/plain', '*/*'],
+  'Authorization': ['Bearer ', 'Basic '],
+  'Cache-Control': ['no-cache', 'max-age=0'],
+  'User-Agent': ['Mozilla/5.0'],
+  'Accept-Language': ['en-US,en;q=0.9'],
+};
+
 const HeadersInput = ({ headers, setHeaders }) => {
   const addHeader = () => {
     setHeaders([...headers, { key: '', value: '' }]);
@@ -31,7 +44,7 @@ const HeadersInput = ({ headers, setHeaders }) => {
           + Add Header
         </button>
       </div>
-      
+
       {headers.length === 0 ? (
         <div className="text-sm text-gray-500 dark:text-gray-400 italic">
           No headers added yet. Click "Add Header" to add request headers.
@@ -40,20 +53,42 @@ const HeadersInput = ({ headers, setHeaders }) => {
         <div className="space-y-2">
           {headers.map((header, index) => (
             <div key={index} className="flex space-x-2">
-              <input
-                type="text"
-                className="input-field flex-1"
-                value={header.key}
-                onChange={(e) => updateHeader(index, 'key', e.target.value)}
-                placeholder="Header Name"
-              />
-              <input
-                type="text"
-                className="input-field flex-1"
-                value={header.value}
-                onChange={(e) => updateHeader(index, 'value', e.target.value)}
-                placeholder="Header Value"
-              />
+              {/* Key Input with datalist */}
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  list={`headerKeys${index}`}
+                  className="input-field w-full"
+                  value={header.key}
+                  onChange={(e) => updateHeader(index, 'key', e.target.value)}
+                  placeholder="Header Name"
+                />
+                <datalist id={`headerKeys${index}`}>
+                  {Object.keys(commonHeaders).map((key) => (
+                    <option key={key} value={key} />
+                  ))}
+                </datalist>
+              </div>
+
+              {/* Value Input with conditional datalist */}
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  list={`headerValues${index}`}
+                  className="input-field w-full"
+                  value={header.value}
+                  onChange={(e) => updateHeader(index, 'value', e.target.value)}
+                  placeholder="Header Value"
+                />
+                <datalist id={`headerValues${index}`}>
+                  {header.key &&
+                    commonHeaders[header.key]?.map((value) => (
+                      <option key={value} value={value} />
+                    ))}
+                </datalist>
+              </div>
+
+              {/* Remove Button */}
               <button
                 type="button"
                 onClick={() => removeHeader(index)}

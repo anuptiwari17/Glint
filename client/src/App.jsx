@@ -139,7 +139,7 @@ function App() {
         </main>
 
         <footer className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-          <p>Glint - A lightweight Postman clone</p>
+          <p>Glint - AI Powered API Tester Tool</p>
         </footer>
       </div>
     </div>
