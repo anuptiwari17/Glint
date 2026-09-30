@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import ReactJson from 'react-json-view';
 import AISuggestion from './AISuggestion';
 import { formatDuration } from '../utils/helpers';
@@ -11,16 +11,7 @@ const ResponseViewer = ({ response, isLoading, error, onRetryWithProxy }) => {
   const [aiError, setAiError] = useState(null);
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (response && response.status >= 400) {
-      getAISuggestion();
-    } else {
-      setAiSuggestion(null);
-      setAiError(null);
-    }
-  }, [response]);
-
-  const getAISuggestion = async () => {
+  const getAISuggestion = useCallback(async () => {
     if (!response) return;
     setAiLoading(true);
     setAiError(null);
@@ -56,7 +47,16 @@ const ResponseViewer = ({ response, isLoading, error, onRetryWithProxy }) => {
     } finally {
       setAiLoading(false);
     }
-  };
+  }, [response]);
+
+  useEffect(() => {
+    if (response && response.status >= 400) {
+      getAISuggestion();
+    } else {
+      setAiSuggestion(null);
+      setAiError(null);
+    }
+  }, [response, getAISuggestion]);
 
   const copyResponse = () => {
     if (!response?.data) return;

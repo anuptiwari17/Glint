@@ -45,22 +45,22 @@ const AISuggestion = ({ isLoading, suggestion, error, onRetry }) => {
         <div className="text-[#cce0ff] leading-relaxed space-y-2">
           <ReactMarkdown
             components={{
-              h1: ({ node, ...props }) => <h5 className="font-bold text-white text-xs mt-3 mb-1" {...props} />,
-              h2: ({ node, ...props }) => <h5 className="font-bold text-[#70a5ff] uppercase tracking-wider text-[11px] mt-3 mb-1" {...props} />,
-              h3: ({ node, ...props }) => <h6 className="font-semibold text-white text-xs mt-2 mb-1" {...props} />,
-              p: ({ node, ...props }) => <p className="text-xs text-[#b8d2f2] mb-1.5 leading-relaxed" {...props} />,
-              ul: ({ node, ...props }) => <ul className="list-disc list-inside space-y-1 my-1.5 text-[#b8d2f2]" {...props} />,
-              ol: ({ node, ...props }) => <ol className="list-decimal list-inside space-y-1 my-1.5 text-[#b8d2f2]" {...props} />,
-              li: ({ node, ...props }) => <li className="text-xs" {...props} />,
-              code: ({ inline, ...props }) => 
+              h1: ({ node, children, ...props }) => <h5 className="font-bold text-white text-xs mt-3 mb-1" {...props}>{children}</h5>,
+              h2: ({ node, children, ...props }) => <h5 className="font-bold text-[#70a5ff] uppercase tracking-wider text-[11px] mt-3 mb-1" {...props}>{children}</h5>,
+              h3: ({ node, children, ...props }) => <h6 className="font-semibold text-white text-xs mt-2 mb-1" {...props}>{children}</h6>,
+              p: ({ node, children, ...props }) => <p className="text-xs text-[#b8d2f2] mb-1.5 leading-relaxed" {...props}>{children}</p>,
+              ul: ({ node, children, ...props }) => <ul className="list-disc list-inside space-y-1 my-1.5 text-[#b8d2f2]" {...props}>{children}</ul>,
+              ol: ({ node, children, ...props }) => <ol className="list-decimal list-inside space-y-1 my-1.5 text-[#b8d2f2]" {...props}>{children}</ol>,
+              li: ({ node, children, ...props }) => <li className="text-xs" {...props}>{children}</li>,
+              code: ({ inline, children, ...props }) => 
                 inline ? (
-                  <code className="px-1 py-0.5 rounded bg-[#111927] text-[#ffb400] font-mono text-[11px]" {...props} />
+                  <code className="px-1 py-0.5 rounded bg-[#111927] text-[#ffb400] font-mono text-[11px]" {...props}>{children}</code>
                 ) : (
                   <div className="p-2.5 my-2 rounded bg-[#111927] border border-[#2e4057] font-mono text-[11px] text-[#e6e6e6] overflow-x-auto">
-                    <pre><code {...props} /></pre>
+                    <pre><code {...props}>{children}</code></pre>
                   </div>
                 ),
-              strong: ({ node, ...props }) => <strong className="font-semibold text-white" {...props} />
+              strong: ({ node, children, ...props }) => <strong className="font-semibold text-white" {...props}>{children}</strong>
             }}
           >
             {suggestion}

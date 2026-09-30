@@ -43,14 +43,13 @@ export const sendRequest = async (url, method, headers, body, useProxy = false) 
     } catch (error) {
       const endTime = Date.now();
       const serverError = error.response?.data?.error || error.message || 'Proxy execution failed';
-      throw {
-        message: serverError,
-        duration: endTime - startTime,
-        url,
-        method,
-        requestHeaders: headersObj,
-        requestBody: body,
-      };
+      const err = new Error(serverError);
+      err.duration = endTime - startTime;
+      err.url = url;
+      err.method = method;
+      err.requestHeaders = headersObj;
+      err.requestBody = body;
+      throw err;
     }
   }
 
@@ -96,26 +95,24 @@ export const sendRequest = async (url, method, headers, body, useProxy = false) 
       };
     } else if (error.request) {
       // Request sent but no response received (CORS block, network error, or timeout)
-      throw {
-        message: 'No response received from target server. This is usually caused by browser CORS policy blocking the response, or an invalid/unreachable host.',
-        isCorsOrNetwork: true,
-        request: error.request,
-        duration: endTime - startTime,
-        url,
-        method,
-        requestHeaders: headersObj,
-        requestBody: body,
-      };
+      const err = new Error('No response received from target server. This is usually caused by browser CORS policy blocking the response, or an invalid/unreachable host.');
+      err.isCorsOrNetwork = true;
+      err.request = error.request;
+      err.duration = endTime - startTime;
+      err.url = url;
+      err.method = method;
+      err.requestHeaders = headersObj;
+      err.requestBody = body;
+      throw err;
     } else {
       // Configuration error
-      throw {
-        message: error.message,
-        duration: endTime - startTime,
-        url,
-        method,
-        requestHeaders: headersObj,
-        requestBody: body,
-      };
+      const err = new Error(error.message);
+      err.duration = endTime - startTime;
+      err.url = url;
+      err.method = method;
+      err.requestHeaders = headersObj;
+      err.requestBody = body;
+      throw err;
     }
   }
 };
