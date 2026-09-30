@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
+const mongoose = require('mongoose');
 const errorHandler = require('./middleware/errorHandler');
 const aiRouter = require('./routes/ai');
 
@@ -16,11 +17,20 @@ app.use(cors({
   credentials: true
 }));
 
+// Optional MongoDB connection
+if (process.env.MONGO_URI) {
+  mongoose.connect(process.env.MONGO_URI)
+    .then(() => console.log('MongoDB connected successfully'))
+    .catch(err => console.warn('MongoDB connection failed, running in memory mode:', err.message));
+} else {
+  console.log('No MONGO_URI provided in .env, running server in stateless/memory mode.');
+}
+
 // Routes
 app.use('/api/request', require('./routes/requestRoutes'));
 app.use('/api/ai', aiRouter);
 
-// Simple health check endpoint
+// Health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'API Tester server is running' });
 });
@@ -30,13 +40,11 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+const server = app.listen(PORT, () => {
+  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  process.exit(1);
+// Handle unhandled promise rejections without crashing the server
+process.on('unhandledRejection', (err) => {
+  console.error(`[Unhandled Rejection]: ${err.message}`);
 });

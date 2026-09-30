@@ -1,15 +1,28 @@
 const Request = require('../models/Request');
 const axios = require('axios');
+const mongoose = require('mongoose');
+
+// Helper to check if MongoDB is connected
+const isDbConnected = () => mongoose.connection.readyState === 1;
 
 /**
  * @desc    Save a request
  * @route   POST /api/request
- * @access  Private
+ * @access  Public / Optional Auth
  */
 exports.saveRequest = async (req, res, next) => {
   try {
-    // Add user to req.body
-    req.body.user = req.user.id;
+    if (!isDbConnected()) {
+      return res.status(200).json({
+        success: true,
+        message: 'Database not connected, saved locally',
+        data: req.body
+      });
+    }
+
+    if (req.user && req.user.id) {
+      req.body.user = req.user.id;
+    }
 
     const request = await Request.create(req.body);
 
@@ -23,13 +36,22 @@ exports.saveRequest = async (req, res, next) => {
 };
 
 /**
- * @desc    Get all requests for a user
+ * @desc    Get all requests
  * @route   GET /api/request
- * @access  Private
+ * @access  Public / Optional Auth
  */
 exports.getRequests = async (req, res, next) => {
   try {
-    const requests = await Request.find({ user: req.user.id }).sort('-createdAt');
+    if (!isDbConnected()) {
+      return res.status(200).json({
+        success: true,
+        count: 0,
+        data: []
+      });
+    }
+
+    const filter = req.user && req.user.id ? { user: req.user.id } : {};
+    const requests = await Request.find(filter).sort('-createdAt').limit(50);
 
     res.status(200).json({
       success: true,
@@ -44,24 +66,23 @@ exports.getRequests = async (req, res, next) => {
 /**
  * @desc    Get single request
  * @route   GET /api/request/:id
- * @access  Private
+ * @access  Public / Optional Auth
  */
 exports.getRequest = async (req, res, next) => {
   try {
+    if (!isDbConnected()) {
+      return res.status(404).json({
+        success: false,
+        error: 'Database not connected'
+      });
+    }
+
     const request = await Request.findById(req.params.id);
 
     if (!request) {
       return res.status(404).json({
         success: false,
         error: 'Request not found'
-      });
-    }
-
-    // Make sure user owns the request
-    if (request.user.toString() !== req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not authorized to access this request'
       });
     }
 
@@ -77,24 +98,23 @@ exports.getRequest = async (req, res, next) => {
 /**
  * @desc    Update request
  * @route   PUT /api/request/:id
- * @access  Private
+ * @access  Public / Optional Auth
  */
 exports.updateRequest = async (req, res, next) => {
   try {
+    if (!isDbConnected()) {
+      return res.status(200).json({
+        success: true,
+        data: req.body
+      });
+    }
+
     let request = await Request.findById(req.params.id);
 
     if (!request) {
       return res.status(404).json({
         success: false,
         error: 'Request not found'
-      });
-    }
-
-    // Make sure user owns the request
-    if (request.user.toString() !== req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not authorized to update this request'
       });
     }
 
@@ -115,10 +135,17 @@ exports.updateRequest = async (req, res, next) => {
 /**
  * @desc    Delete request
  * @route   DELETE /api/request/:id
- * @access  Private
+ * @access  Public / Optional Auth
  */
 exports.deleteRequest = async (req, res, next) => {
   try {
+    if (!isDbConnected()) {
+      return res.status(200).json({
+        success: true,
+        data: {}
+      });
+    }
+
     const request = await Request.findById(req.params.id);
 
     if (!request) {
@@ -128,15 +155,7 @@ exports.deleteRequest = async (req, res, next) => {
       });
     }
 
-    // Make sure user owns the request
-    if (request.user.toString() !== req.user.id) {
-      return res.status(401).json({
-        success: false,
-        error: 'Not authorized to delete this request'
-      });
-    }
-
-    await request.remove();
+    await Request.findByIdAndDelete(req.params.id);
 
     res.status(200).json({
       success: true,
@@ -148,9 +167,9 @@ exports.deleteRequest = async (req, res, next) => {
 };
 
 /**
- * @desc    Execute a request (proxy)
+ * @desc    Execute a request (proxy to bypass browser CORS)
  * @route   POST /api/request/execute
- * @access  Private
+ * @access  Public
  */
 exports.executeRequest = async (req, res, next) => {
   try {
@@ -163,7 +182,7 @@ exports.executeRequest = async (req, res, next) => {
       });
     }
 
-    // Convert headers from array to object
+    // Convert headers from array to object if necessary
     const headersObj = {};
     if (headers && Array.isArray(headers)) {
       headers.forEach(header => {
@@ -171,6 +190,8 @@ exports.executeRequest = async (req, res, next) => {
           headersObj[header.key] = header.value;
         }
       });
+    } else if (headers && typeof headers === 'object') {
+      Object.assign(headersObj, headers);
     }
 
     const startTime = Date.now();
@@ -181,7 +202,8 @@ exports.executeRequest = async (req, res, next) => {
         method,
         headers: headersObj,
         data: method !== 'GET' && method !== 'DELETE' ? body : undefined,
-        timeout: 30000, // 30 second timeout
+        timeout: 30000,
+        validateStatus: () => true // Allow all status codes (2xx, 3xx, 4xx, 5xx) to be captured
       });
 
       const endTime = Date.now();
@@ -194,41 +216,24 @@ exports.executeRequest = async (req, res, next) => {
           statusText: response.statusText,
           headers: response.headers,
           duration: endTime - startTime,
+          url,
+          method,
+          requestHeaders: headersObj,
+          requestBody: body
         }
       });
     } catch (error) {
       const endTime = Date.now();
       
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        return res.status(200).json({
-          success: true,
-          data: {
-            data: error.response.data,
-            status: error.response.status,
-            statusText: error.response.statusText,
-            headers: error.response.headers,
-            duration: endTime - startTime,
-            isError: true,
-          }
-        });
-      } else if (error.request) {
-        // The request was made but no response was received
-        return res.status(500).json({
-          success: false,
-          error: 'No response received from server',
-          request: error.request,
-          duration: endTime - startTime,
-        });
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        return res.status(500).json({
-          success: false,
-          error: error.message,
-          duration: endTime - startTime,
-        });
-      }
+      return res.status(500).json({
+        success: false,
+        error: error.message || 'Server failed to connect to the target URL',
+        duration: endTime - startTime,
+        url,
+        method,
+        requestHeaders: headersObj,
+        requestBody: body
+      });
     }
   } catch (err) {
     next(err);

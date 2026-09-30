@@ -3,29 +3,65 @@ import axios from 'axios';
 /**
  * Send an HTTP request to the specified URL with given parameters
  * @param {string} url - The URL to send the request to
- * @param {string} method - HTTP method (GET, POST, PUT, DELETE)
- * @param {Object} headers - Request headers as key-value pairs
- * @param {Object|null} body - Request body (for POST/PUT requests)
- * @returns {Promise} - Promise resolving to the response object
+ * @param {string} method - HTTP method (GET, POST, PUT, DELETE, PATCH, etc.)
+ * @param {Array|Object} headers - Request headers
+ * @param {Object|string|null} body - Request body
+ * @param {boolean} useProxy - Whether to route through the backend proxy to bypass browser CORS
+ * @returns {Promise<Object>} - Promise resolving to response object with full request metadata
  */
-export const sendRequest = async (url, method, headers, body) => {
+export const sendRequest = async (url, method, headers, body, useProxy = false) => {
   const startTime = Date.now();
   
-  try {
-    // Convert headers from array of objects to a single object
-    const headersObj = headers.reduce((acc, header) => {
-      if (header.key && header.key.trim() !== '') {
-        acc[header.key] = header.value;
-      }
-      return acc;
-    }, {});
+  // Convert headers from array of objects to a single object
+  const headersObj = Array.isArray(headers)
+    ? headers.reduce((acc, header) => {
+        if (header.key && header.key.trim() !== '') {
+          acc[header.key.trim()] = header.value;
+        }
+        return acc;
+      }, {})
+    : (headers || {});
 
+  // If proxy mode is requested, use the server-side proxy to bypass browser CORS restrictions
+  if (useProxy) {
+    try {
+      const response = await axios.post('/api/request/execute', {
+        url,
+        method,
+        headers: headersObj,
+        body: method !== 'GET' && method !== 'DELETE' ? body : undefined,
+      });
+
+      const result = response.data.data;
+      return {
+        ...result,
+        url,
+        method,
+        requestHeaders: headersObj,
+        requestBody: body,
+      };
+    } catch (error) {
+      const endTime = Date.now();
+      const serverError = error.response?.data?.error || error.message || 'Proxy execution failed';
+      throw {
+        message: serverError,
+        duration: endTime - startTime,
+        url,
+        method,
+        requestHeaders: headersObj,
+        requestBody: body,
+      };
+    }
+  }
+
+  // Direct client-side execution via browser axios
+  try {
     const response = await axios({
       url,
       method,
       headers: headersObj,
       data: method !== 'GET' && method !== 'DELETE' ? body : undefined,
-      timeout: 30000, // 30 second timeout
+      timeout: 30000,
     });
 
     const endTime = Date.now();
@@ -36,13 +72,16 @@ export const sendRequest = async (url, method, headers, body) => {
       statusText: response.statusText,
       headers: response.headers,
       duration: endTime - startTime,
+      url,
+      method,
+      requestHeaders: headersObj,
+      requestBody: body,
     };
   } catch (error) {
     const endTime = Date.now();
     
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
+      // Server returned an error HTTP status (4xx or 5xx)
       return {
         data: error.response.data,
         status: error.response.status,
@@ -50,19 +89,32 @@ export const sendRequest = async (url, method, headers, body) => {
         headers: error.response.headers,
         duration: endTime - startTime,
         isError: true,
+        url,
+        method,
+        requestHeaders: headersObj,
+        requestBody: body,
       };
     } else if (error.request) {
-      // The request was made but no response was received
+      // Request sent but no response received (CORS block, network error, or timeout)
       throw {
-        message: 'No response received from server',
+        message: 'No response received from target server. This is usually caused by browser CORS policy blocking the response, or an invalid/unreachable host.',
+        isCorsOrNetwork: true,
         request: error.request,
         duration: endTime - startTime,
+        url,
+        method,
+        requestHeaders: headersObj,
+        requestBody: body,
       };
     } else {
-      // Something happened in setting up the request that triggered an Error
+      // Configuration error
       throw {
         message: error.message,
         duration: endTime - startTime,
+        url,
+        method,
+        requestHeaders: headersObj,
+        requestBody: body,
       };
     }
   }

@@ -1,27 +1,23 @@
 import React from 'react';
 
 const commonHeaders = {
-  'Content-Type': [
-    'application/json',
-    'application/x-www-form-urlencoded',
-    'multipart/form-data',
-  ],
+  'Content-Type': ['application/json', 'application/x-www-form-urlencoded', 'multipart/form-data', 'text/plain'],
   'Accept': ['application/json', 'text/plain', '*/*'],
-  'Authorization': ['Bearer ', 'Basic '],
+  'Authorization': ['Bearer ', 'Basic ', 'Token '],
   'Cache-Control': ['no-cache', 'max-age=0'],
-  'User-Agent': ['Mozilla/5.0'],
-  'Accept-Language': ['en-US,en;q=0.9'],
+  'User-Agent': ['PostmanRuntime/7.32.3', 'Glint/1.0'],
+  'X-API-Key': [''],
 };
 
 const HeadersInput = ({ headers, setHeaders }) => {
-  const addHeader = () => {
-    setHeaders([...headers, { key: '', value: '' }]);
+  const addHeader = (defaultKey = '', defaultValue = '') => {
+    setHeaders([...headers, { key: defaultKey, value: defaultValue }]);
   };
 
   const removeHeader = (index) => {
     const newHeaders = [...headers];
     newHeaders.splice(index, 1);
-    setHeaders(newHeaders);
+    setHeaders(newHeaders.length > 0 ? newHeaders : [{ key: '', value: '' }]);
   };
 
   const updateHeader = (index, field, value) => {
@@ -30,38 +26,74 @@ const HeadersInput = ({ headers, setHeaders }) => {
     setHeaders(newHeaders);
   };
 
+  const addPreset = (type) => {
+    const existing = headers.filter(h => h.key && h.key.trim() !== '');
+    if (type === 'json') {
+      const hasContentType = existing.some(h => h.key.toLowerCase() === 'content-type');
+      const additions = hasContentType ? [] : [{ key: 'Content-Type', value: 'application/json' }];
+      setHeaders([...existing, ...additions]);
+    } else if (type === 'auth') {
+      const hasAuth = existing.some(h => h.key.toLowerCase() === 'authorization');
+      const additions = hasAuth ? [] : [{ key: 'Authorization', value: 'Bearer ' }];
+      setHeaders([...existing, ...additions]);
+    }
+  };
+
   return (
-    <div className="mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <label className="font-medium text-gray-700 dark:text-gray-300">
-          Headers
-        </label>
-        <button
-          type="button"
-          onClick={addHeader}
-          className="text-sm px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none"
-        >
-          + Add Header
-        </button>
+    <div className="space-y-3">
+      {/* Subheader Toolbar */}
+      <div className="flex items-center justify-between text-xs text-[#8c8c8c] pb-2 border-b border-[#2e2e2e]">
+        <div className="font-semibold uppercase tracking-wider text-[11px] text-[#999999]">
+          Headers ({headers.filter(h => h.key.trim() !== '').length})
+        </div>
+        <div className="flex items-center space-x-2">
+          <button
+            type="button"
+            onClick={() => addPreset('json')}
+            className="text-[11px] text-[#097bed] hover:underline"
+          >
+            + Content-Type: JSON
+          </button>
+          <span className="text-[#383838]">|</span>
+          <button
+            type="button"
+            onClick={() => addPreset('auth')}
+            className="text-[11px] text-[#097bed] hover:underline"
+          >
+            + Bearer Token
+          </button>
+          <span className="text-[#383838]">|</span>
+          <button
+            type="button"
+            onClick={() => addHeader()}
+            className="text-[11px] text-[#097bed] hover:underline font-medium"
+          >
+            + Add Row
+          </button>
+        </div>
       </div>
 
-      {headers.length === 0 ? (
-        <div className="text-sm text-gray-500 dark:text-gray-400 italic">
-          No headers added yet. Click "Add Header" to add request headers.
+      {/* Postman-like Key-Value Grid */}
+      <div className="border border-[#333333] rounded-sm overflow-hidden bg-[#1e1e1e]">
+        <div className="grid grid-cols-12 bg-[#252525] border-b border-[#333333] text-[11px] font-semibold text-[#8c8c8c] uppercase px-3 py-1.5">
+          <div className="col-span-5">Key</div>
+          <div className="col-span-6 border-l border-[#333333] pl-3">Value</div>
+          <div className="col-span-1 text-center"></div>
         </div>
-      ) : (
-        <div className="space-y-2">
+
+        <div className="divide-y divide-[#2a2a2a]">
           {headers.map((header, index) => (
-            <div key={index} className="flex space-x-2">
-              {/* Key Input with datalist */}
-              <div className="flex-1 relative">
+            <div key={index} className="grid grid-cols-12 items-center text-xs group hover:bg-[#252525]">
+              {/* Key cell */}
+              <div className="col-span-5 px-3 py-1">
                 <input
                   type="text"
                   list={`headerKeys${index}`}
-                  className="input-field w-full"
                   value={header.key}
                   onChange={(e) => updateHeader(index, 'key', e.target.value)}
-                  placeholder="Header Name"
+                  placeholder="Key"
+                  className="w-full bg-transparent text-[#e6e6e6] placeholder-[#555555] font-mono text-xs outline-none"
+                  spellCheck="false"
                 />
                 <datalist id={`headerKeys${index}`}>
                   {Object.keys(commonHeaders).map((key) => (
@@ -70,15 +102,16 @@ const HeadersInput = ({ headers, setHeaders }) => {
                 </datalist>
               </div>
 
-              {/* Value Input with conditional datalist */}
-              <div className="flex-1 relative">
+              {/* Value cell */}
+              <div className="col-span-6 border-l border-[#2e2e2e] px-3 py-1">
                 <input
                   type="text"
                   list={`headerValues${index}`}
-                  className="input-field w-full"
                   value={header.value}
                   onChange={(e) => updateHeader(index, 'value', e.target.value)}
-                  placeholder="Header Value"
+                  placeholder="Value"
+                  className="w-full bg-transparent text-[#e6e6e6] placeholder-[#555555] font-mono text-xs outline-none"
+                  spellCheck="false"
                 />
                 <datalist id={`headerValues${index}`}>
                   {header.key &&
@@ -88,18 +121,21 @@ const HeadersInput = ({ headers, setHeaders }) => {
                 </datalist>
               </div>
 
-              {/* Remove Button */}
-              <button
-                type="button"
-                onClick={() => removeHeader(index)}
-                className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 rounded hover:bg-red-200 dark:hover:bg-red-800 focus:outline-none"
-              >
-                ✕
-              </button>
+              {/* Delete row */}
+              <div className="col-span-1 text-center">
+                <button
+                  type="button"
+                  onClick={() => removeHeader(index)}
+                  className="text-[#666666] hover:text-[#eb2013] text-sm px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                  title="Delete row"
+                >
+                  ×
+                </button>
+              </div>
             </div>
           ))}
         </div>
-      )}
+      </div>
     </div>
   );
 };

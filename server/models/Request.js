@@ -4,8 +4,8 @@ const RequestSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Please add a request name'],
       trim: true,
+      default: 'Untitled Request',
       maxlength: [100, 'Name cannot be more than 100 characters']
     },
     url: {
@@ -34,7 +34,7 @@ const RequestSchema = new mongoose.Schema(
     user: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
-      required: true
+      required: false
     }
   },
   {

@@ -1,31 +1,35 @@
 import React from 'react';
-import { isValidUrl } from '../utils/helpers';
 
 const UrlInput = ({ url, setUrl, onSubmit }) => {
   const handleKeyDown = (e) => {
     if (e.key === 'Enter') {
+      e.preventDefault();
       onSubmit();
     }
   };
 
   return (
-    <div className="flex flex-col mb-4">
-      <label htmlFor="url" className="mb-1 font-medium text-gray-700 dark:text-gray-300">
-        Request URL
-      </label>
-      <div className="flex">
-        <input
-          type="text"
-          id="url"
-          className={`input-field flex-grow ${!url || isValidUrl(url) ? '' : 'border-red-500'}`}
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://api.example.com/endpoint"
-          onKeyDown={handleKeyDown}
-        />
-      </div>
-      {url && !isValidUrl(url) && (
-        <p className="mt-1 text-sm text-red-500">Please enter a valid URL</p>
+    <div className="flex-1 relative flex items-center bg-[#262626]">
+      <input
+        type="text"
+        id="url-input"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Enter URL or paste text (e.g. https://api.example.com/v1/users)"
+        className="w-full bg-transparent text-[#e6e6e6] placeholder-[#666666] font-mono text-xs px-3 py-2 outline-none"
+        spellCheck="false"
+        autoComplete="off"
+      />
+      {url && (
+        <button
+          type="button"
+          onClick={() => setUrl('')}
+          className="text-[#666666] hover:text-[#cccccc] px-2 text-xs font-mono"
+          title="Clear"
+        >
+          ×
+        </button>
       )}
     </div>
   );

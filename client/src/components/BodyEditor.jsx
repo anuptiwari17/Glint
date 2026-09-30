@@ -4,73 +4,101 @@ import { isValidJson } from '../utils/helpers';
 const BodyEditor = ({ body, setBody, method }) => {
   const [error, setError] = useState('');
   
-  // Methods that should have body content
-  const bodyMethods = ['POST', 'PUT', 'PATCH'];
+  const bodyMethods = ['POST', 'PUT', 'PATCH', 'DELETE'];
   const canHaveBody = bodyMethods.includes(method);
 
   // Validate JSON when body changes
   useEffect(() => {
     if (body && !isValidJson(body)) {
-      setError('Invalid JSON format');
+      try {
+        JSON.parse(body);
+        setError('');
+      } catch (e) {
+        setError(e.message || 'Invalid JSON format');
+      }
     } else {
       setError('');
     }
   }, [body]);
 
-  // Format the JSON for better readability
   const formatJson = () => {
     try {
       if (!body || body.trim() === '') return;
       const parsed = JSON.parse(body);
       setBody(JSON.stringify(parsed, null, 2));
+      setError('');
     } catch (e) {
-      setError('Cannot format: Invalid JSON');
+      setError('Cannot format: ' + e.message);
     }
   };
 
-  // Clear the body content
   const clearBody = () => {
     setBody('');
     setError('');
   };
 
   if (!canHaveBody) {
-    return null;
+    return (
+      <div className="py-8 text-center text-[#777777] border border-dashed border-[#333333] rounded-sm bg-[#1e1e1e]/50">
+        <p className="text-xs">This request does not have a body.</p>
+      </div>
+    );
   }
 
   return (
-    <div className="mb-4">
-      <div className="flex justify-between items-center mb-2">
-        <label htmlFor="body" className="font-medium text-gray-700 dark:text-gray-300">
-          Request Body (JSON)
-        </label>
-        <div className="space-x-2">
+    <div className="space-y-2">
+      {/* Subheader / Toolbar */}
+      <div className="flex items-center justify-between text-xs pb-1.5 border-b border-[#2e2e2e]">
+        <div className="flex items-center space-x-3 text-xs text-[#8c8c8c]">
+          <span className="font-semibold uppercase tracking-wider text-[11px] text-[#999999]">
+            raw (JSON)
+          </span>
+          {body && !error && (
+            <span className="text-[11px] text-[#0cbb52]">● Valid JSON</span>
+          )}
+          {error && (
+            <span className="text-[11px] text-[#eb2013]">● JSON Error</span>
+          )}
+        </div>
+
+        <div className="flex items-center space-x-2">
           <button
             type="button"
             onClick={formatJson}
-            className="text-sm px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none"
-            disabled={!body || error}
+            disabled={!body || !!error}
+            className="text-[11px] text-[#097bed] hover:underline disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Format JSON
+            Beautify
           </button>
+          <span className="text-[#383838]">|</span>
           <button
             type="button"
             onClick={clearBody}
-            className="text-sm px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none"
             disabled={!body}
+            className="text-[11px] text-[#8c8c8c] hover:text-[#e6e6e6] disabled:opacity-40 disabled:cursor-not-allowed"
           >
             Clear
           </button>
         </div>
       </div>
-      <textarea
-        id="body"
-        className={`input-field w-full h-40 font-mono text-sm ${error ? 'border-red-500' : ''}`}
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        placeholder='{\n  "key": "value"\n}'
-      />
-      {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
+
+      {/* Editor Area */}
+      <div className="border border-[#333333] rounded-sm overflow-hidden bg-[#1e1e1e]">
+        <textarea
+          id="body-editor"
+          className="w-full h-48 p-3 bg-[#1e1e1e] text-[#e6e6e6] placeholder-[#555555] font-mono text-xs focus:outline-none resize-y leading-relaxed border-0"
+          value={body}
+          onChange={(e) => setBody(e.target.value)}
+          placeholder={`{\n  "name": "value"\n}`}
+          spellCheck="false"
+        />
+      </div>
+
+      {error && (
+        <div className="text-xs text-[#eb2013] font-mono mt-1">
+          {error}
+        </div>
+      )}
     </div>
   );
 };
